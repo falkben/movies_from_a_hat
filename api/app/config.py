@@ -8,8 +8,16 @@ TMDB_API_URL = "https://api.themoviedb.org/3"
 
 class Settings(BaseSettings):
 
+    secret: str = Field(
+        ..., env="SECRET_KEY", description="A unique unpredictable value"
+    )
+
     tmdb_api_url: str = TMDB_API_URL
-    tmdb_api_key: str = Field(..., env="TMDB_API_TOKEN")
+    tmdb_api_key: str = Field(
+        ...,
+        env="TMDB_API_TOKEN",
+        description="From https://www.themoviedb.org/settings/api",
+    )
     tmdb_base_path: HttpUrl | None = None
 
     @validator("tmdb_base_path", always=True)

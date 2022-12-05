@@ -1,9 +1,10 @@
 """Main entrypoint"""
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 
-from app import db, movies
+from app import db, movies, security, users
 
 app = FastAPI()
 
@@ -25,6 +26,18 @@ async def on_startup():
 
 
 app.include_router(movies.router)
+app.include_router(users.router)
+
+
+@app.exception_handler(security.NotAuthenticatedException)
+def auth_exception_handler(request: Request, exc: security.NotAuthenticatedException):
+    """
+    Redirect the user to the login page if not logged in
+    """
+
+    # todo: pass along context for page they were trying to visit
+    return RedirectResponse(url="/login")
+
 
 if __name__ == "__main__":
     import uvicorn
