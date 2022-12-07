@@ -1,6 +1,6 @@
 from fastapi_login import LoginManager
 
-from app.config import get_settings
+from app.config import get_secret
 
 
 class NotAuthenticatedException(Exception):
@@ -10,7 +10,7 @@ class NotAuthenticatedException(Exception):
 # by default enable Authentication header login (bearer token)
 # could be disabled with use_header=False
 manager = LoginManager(
-    get_settings().secret,
+    get_secret(),
     "/login",
     use_cookie=True,
     cookie_name="movies-from-a-hat",

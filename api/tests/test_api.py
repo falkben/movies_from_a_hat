@@ -9,6 +9,8 @@ from app import config
 from app.movies import TMDBSearchResult
 from app.tables import Genre, Movie, MovieResponse
 
+from .api_fixtures import client_fixture  # noqa: F401
+
 DUDE_DATA = {
     "title": "The Big Lebowski",
     "release_date": date(1998, 3, 6).strftime("%Y-%m-%d"),
