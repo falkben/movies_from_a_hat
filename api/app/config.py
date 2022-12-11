@@ -54,7 +54,7 @@ class Secret(BaseSettings):
 
 
 @lru_cache
-def get_settings():
+def get_settings() -> Settings:
     """dependency for returning settings
 
     Note: we use @lru_cache to avoid calling the configuration endpoint over and over
@@ -63,5 +63,5 @@ def get_settings():
 
 
 @lru_cache
-def get_secret():
+def get_secret() -> str:
     return Secret().secret

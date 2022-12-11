@@ -1,3 +1,5 @@
+import datetime
+
 from fastapi_login import LoginManager
 
 from app.config import get_secret
@@ -15,6 +17,7 @@ manager = LoginManager(
     use_cookie=True,
     cookie_name="movies-from-a-hat",
     custom_exception=NotAuthenticatedException,
+    default_expiry=datetime.timedelta(days=1),
 )
 
 
