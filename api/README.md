@@ -27,7 +27,7 @@
 
 Copy the `.env.example` into a new `.env` file
 
-Edit the file and enter your API token.
+Edit the file and enter the required information.
 
 ## Run
 

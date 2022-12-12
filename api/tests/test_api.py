@@ -7,7 +7,9 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app import config
 from app.movies import TMDBSearchResult
-from app.tables import Genre, Movie, MovieRead
+from app.tables import Genre, Movie, MovieResponse
+
+from .api_fixtures import client_fixture  # noqa: F401
 
 DUDE_DATA = {
     "title": "The Big Lebowski",
@@ -171,7 +173,7 @@ async def test_update_movie_no_change(client: TestClient, dude_movie: Movie):
     data = resp.json()
     assert resp.status_code == 200, data
 
-    movie_patch = MovieRead(**data)
+    movie_patch = MovieResponse(**data)
     assert movie_patch.created_at == dude_movie.created_at
     assert movie_patch.updated_at is None
 
@@ -182,7 +184,7 @@ async def test_remove_genres(client: TestClient, dude_movie: Movie):
     data = resp.json()
     assert resp.status_code == 200, data
     # check other data is still there
-    movie_patch = MovieRead(**data)
+    movie_patch = MovieResponse(**data)
     assert movie_patch.title == dude_movie.title
     assert movie_patch.genres == []
 

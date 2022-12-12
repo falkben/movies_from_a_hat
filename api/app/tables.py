@@ -103,7 +103,7 @@ class MovieCreate(MovieBase):
     pass
 
 
-class MovieRead(MovieBase):
+class MovieResponse(MovieBase):
     id: int
     created_at: datetime
     updated_at: datetime | None
