@@ -7,6 +7,7 @@ import pytest
 import respx
 from _pytest.logging import LogCaptureFixture
 from faker import Faker
+from fastapi_users_db_sqlmodel import SQLModelUserDatabaseAsync
 from httpx import Response
 from loguru import logger
 from respx.patterns import M
@@ -17,6 +18,8 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel.pool import StaticPool
 
 from app import config
+from app.db import get_user_db
+from app.users import get_user_manager
 
 
 @pytest.fixture
@@ -77,6 +80,18 @@ async def session_fixture(engine: Engine):
     )
     async with async_session_factory() as session:
         yield session
+
+
+@pytest.fixture(name="user_db")
+async def user_db_fixture(session: AsyncSession):
+    async for user_db in get_user_db(session):
+        yield user_db
+
+
+@pytest.fixture(name="user_manager")
+async def user_manager_fixture(user_db: SQLModelUserDatabaseAsync):
+    async for user_manager in get_user_manager(user_db):
+        yield user_manager
 
 
 @pytest.fixture

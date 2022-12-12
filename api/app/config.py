@@ -16,6 +16,11 @@ class Settings(BaseSettings):
     )
     tmdb_base_path: HttpUrl | None = None
 
+    # security
+    cookie_secure: bool = Field(False, env="COOKIE_SECURE")
+    cookie_domain: str | None = Field(None, env="COOKIE_DOMAIN")
+    cookie_samesite: str = Field("lax", env="COOKIE_SAMESITE")
+
     @validator("tmdb_base_path", always=True)
     def set_tmdb_base_path(cls, value: str, values: dict):
         """Assign the tmdb_base_path"""
