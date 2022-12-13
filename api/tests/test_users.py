@@ -77,6 +77,10 @@ def test_logout_user(
     assert len(resp.cookies) == 0
     assert 'movies-from-a-hat=""' in resp.headers.get("set-cookie")
 
+    # second attempt to login fails
+    resp = client.post("/auth/cookie/logout", cookies={"movies-from-a-hat": token})
+    assert resp.status_code == 401, resp.json()
+
 
 def test_logout_no_user(client: TestClient, user: User):
     resp = client.post("/auth/cookie/logout", follow_redirects=False)
