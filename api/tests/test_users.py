@@ -6,8 +6,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.tables import User, UserCreate
 from app.users import UserManager
 
-from .api_fixtures import client_fixture  # noqa: F401
-
 USER_DATA = {
     "email": "example@example.com",
     "password": "hunter2",

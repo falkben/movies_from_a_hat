@@ -6,6 +6,7 @@ import pytest
 import respx
 from _pytest.logging import LogCaptureFixture
 from faker import Faker
+from fastapi.testclient import TestClient
 from fastapi_users_db_sqlmodel import SQLModelUserDatabaseAsync
 from httpx import Response
 from loguru import logger
@@ -17,7 +18,8 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel.pool import StaticPool
 
 from app import config
-from app.db import get_user_db
+from app.api import init_app
+from app.db import get_session, get_user_db
 from app.users import get_user_manager
 
 
@@ -85,6 +87,40 @@ async def user_db_fixture(session: AsyncSession):
 async def user_manager_fixture(user_db: SQLModelUserDatabaseAsync):
     async for user_manager in get_user_manager(user_db):
         yield user_manager
+
+
+@pytest.fixture(name="client")
+async def client_fixture(session: AsyncSession):
+    """Create the test client
+
+    Overrides the session dependency in our endpoints to use this session instead
+
+    Note that because we create the database tables with a startup event
+    (using create_db_and_tables), this fixture must occur in the parameter list before
+    other database access fixtures.
+
+    E.g. works:
+
+    def my_test_func(client: TestClient, dude_movie: Movie): ...
+
+    Doesn't work, because dude_movie fixture tries to access database tables:
+
+    def my_test_func(dude_movie: Movie, client: TestClient): ...
+    """
+
+    app = init_app()
+
+    def get_session_override() -> AsyncSession:
+        return session
+
+    # Set the dependency override in the app.dependency_overrides dictionary.
+    app.dependency_overrides[get_session] = get_session_override
+
+    # context manager runs the app startup/shutdown/lifespan events
+    with TestClient(app) as client:
+        yield client
+
+    app.dependency_overrides.clear()
 
 
 @pytest.fixture
