@@ -7,7 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.api import app
+from app.api import init_app
 from app.db import get_session
 
 
@@ -29,6 +29,8 @@ async def client_fixture(session: AsyncSession):
 
     def my_test_func(dude_movie: Movie, client: TestClient): ...
     """
+
+    app = init_app()
 
     def get_session_override() -> AsyncSession:
         return session

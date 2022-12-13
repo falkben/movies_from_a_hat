@@ -1,7 +1,6 @@
 from functools import lru_cache
 
-import httpx
-from pydantic import BaseSettings, Field, HttpUrl, validator
+from pydantic import BaseSettings, Field
 
 TMDB_API_URL = "https://api.themoviedb.org/3"
 
@@ -14,44 +13,14 @@ class Settings(BaseSettings):
         env="TMDB_API_TOKEN",
         description="From https://www.themoviedb.org/settings/api",
     )
-    tmdb_base_path: HttpUrl | None = None
+    secret: str = Field(
+        ..., env="SECRET_KEY", description="A unique unpredictable value"
+    )
 
     # security
     cookie_secure: bool = Field(False, env="COOKIE_SECURE")
     cookie_domain: str | None = Field(None, env="COOKIE_DOMAIN")
     cookie_samesite: str = Field("lax", env="COOKIE_SAMESITE")
-
-    @validator("tmdb_base_path", always=True)
-    def set_tmdb_base_path(cls, value: str, values: dict):
-        """Assign the tmdb_base_path"""
-
-        # we use a validator here to "compute" tmdb_base_path, which requires tmdb_api_key
-        # see: https://pydantic-docs.helpmanual.io/usage/validators/#validate-always
-
-        # get configuration for poster base_url (e.g.: https://image.tmdb.org/t/p/)
-        #  https://api.themoviedb.org/3/configuration?api_key=<<api_key>>
-
-        if value is None:
-            tmdb_config_url = f"{values['tmdb_api_url']}/configuration"
-            config_resp = httpx.get(
-                tmdb_config_url, params={"api_key": values["tmdb_api_key"]}
-            )
-            value = config_resp.json()["images"]["secure_base_url"]
-        return value
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-
-
-class Secret(BaseSettings):
-    """This settings config needs to be loaded at import time
-    since it's used to set up the login manager decorator so for testing,
-    we've split it out into a separate class"""
-
-    secret: str = Field(
-        ..., env="SECRET_KEY", description="A unique unpredictable value"
-    )
 
     class Config:
         env_file = ".env"
@@ -65,8 +34,3 @@ def get_settings() -> Settings:
     Note: we use @lru_cache to avoid calling the configuration endpoint over and over
     """
     return Settings()
-
-
-@lru_cache
-def get_secret() -> str:
-    return Secret().secret

@@ -32,7 +32,7 @@ Edit the file and enter the required information.
 ## Run
 
 ```sh
-uvicorn app.api:app --reload
+uvicorn app.api:init_app --factory --reload
 ```
 
 Visit the OpenAPI docs at <https://localhost:8000/docs>

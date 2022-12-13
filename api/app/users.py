@@ -11,17 +11,9 @@ from fastapi_users_db_sqlmodel.access_token import (
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import get_secret, get_settings
+from app.config import get_settings
 from app.db import get_session, get_user_db
 from app.tables import AccessToken, User
-
-cookie_transport = CookieTransport(
-    cookie_name="movies-from-a-hat",
-    cookie_max_age=None,
-    cookie_secure=get_settings().cookie_secure,
-    cookie_domain=get_settings().cookie_domain,
-    cookie_samesite=get_settings().cookie_samesite,
-)
 
 
 async def get_access_token_db(session: AsyncSession = Depends(get_session)):
@@ -36,16 +28,15 @@ def get_database_strategy(
     return DatabaseStrategy(access_token_db, lifetime_seconds=None)
 
 
-auth_backend = AuthenticationBackend(
-    name="cookie",
-    transport=cookie_transport,
-    get_strategy=get_database_strategy,
-)
-
-
 class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
-    reset_password_token_secret = get_secret()
-    verification_token_secret = get_secret()
+    def __init__(self, *args, **kwargs):
+        """User __init__ here to set secret (instead of as a class attribute) so it's
+        not done at import time which helps with initializing tests with mocked secret
+        value"""
+
+        super().__init__(*args, **kwargs)
+        self.reset_password_token_secret = get_settings().secret
+        self.verification_token_secret = get_settings().secret
 
     async def on_after_register(self, user: User, request: Request | None = None):
         logger.info("User {} has registered.", user.id)
@@ -63,3 +54,21 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
 
 async def get_user_manager(user_db=Depends(get_user_db)):
     yield UserManager(user_db)
+
+
+def get_cookie_transport():
+    return CookieTransport(
+        cookie_name="movies-from-a-hat",
+        cookie_max_age=None,
+        cookie_secure=get_settings().cookie_secure,
+        cookie_domain=get_settings().cookie_domain,
+        cookie_samesite=get_settings().cookie_samesite,
+    )
+
+
+def get_auth_backend():
+    return AuthenticationBackend(
+        name="cookie",
+        transport=get_cookie_transport(),
+        get_strategy=get_database_strategy,
+    )
