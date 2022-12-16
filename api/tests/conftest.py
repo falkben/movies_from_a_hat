@@ -1,5 +1,4 @@
 import json
-import os
 from pathlib import Path
 from unittest.mock import patch
 
@@ -33,16 +32,10 @@ def caplog(caplog: LogCaptureFixture):
     logger.remove(handler_id)
 
 
-def pytest_configure(config):
-    # in api, secret config needs to be present at import time because it's used
-    # to create the login manager decorator
-    # pytest_configure is a hook that runs at pytest startup, before anything else
-    os.environ["SECRET_KEY"] = "secret"
-
-
 @pytest.fixture(autouse=True)
 def patch_env_var(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("TMDB_API_TOKEN", "TESTING")
+    monkeypatch.setenv("SECRET_KEY", "secret")
 
 
 @pytest.fixture(name="engine")

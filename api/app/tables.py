@@ -6,7 +6,7 @@ from sqlalchemy import CheckConstraint, Column, DateTime, UniqueConstraint
 from sqlalchemy.sql import func
 from sqlmodel import Field, Relationship, SQLModel
 
-from app import security
+from app.security import auth_config
 
 
 class UserBase(SQLModel):
@@ -38,7 +38,7 @@ class UserCreate(UserBase):
 
     @validator("password")
     def hash_password(cls, plaintext_password: str):
-        return security.hash_password(plaintext_password)
+        return auth_config.hash_password(plaintext_password)
 
 
 class UserResponse(UserBase):

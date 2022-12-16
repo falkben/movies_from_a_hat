@@ -8,12 +8,12 @@ from sqlalchemy import or_
 from sqlalchemy.future import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app import db, security
+from app import db
 from app.db_helpers import create_user, get_user, require_login
-from app.security import manager
+from app.security import auth_config
 from app.tables import User, UserCreate, UserResponse
 
-router = APIRouter()
+router = APIRouter(tags=["auth"])
 
 
 @router.post("/register", response_model=UserResponse)
@@ -46,11 +46,11 @@ async def login(
     user: User | None = await get_user(email, session)
     if not user:
         raise InvalidCredentialsException
-    elif not security.verify_password(password, user.password):
+    elif not auth_config.verify_password(password, user.password):
         raise InvalidCredentialsException
 
-    token = manager.create_access_token(data={"sub": user.email})
-    manager.set_cookie(response, token)
+    token = auth_config.manager().create_access_token(data={"sub": user.email})
+    auth_config.set_cookie(response, token)
 
     logger.info("Logged in user {}", user.email)
 
@@ -64,7 +64,10 @@ async def logout(
     user: User = Depends(require_login),
 ):
 
-    response.delete_cookie(manager.cookie_name)
+    # Note: this just tells the browser to delete the session cookie
+    # We cannot expire/revoke a JWT
+
+    response.delete_cookie(auth_config.manager().cookie_name)
 
     logger.info("Logged out user {}", user.email)
 

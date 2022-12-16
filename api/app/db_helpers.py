@@ -6,7 +6,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel.main import SQLModelMetaclass
 
 from app import db
-from app.security import NotAuthenticatedException, manager
+from app.security import NotAuthenticatedException, auth_config
 from app.tables import User, UserCreate
 
 
@@ -81,11 +81,11 @@ async def require_login(
 ):
     """Depends function for getting a user"""
 
-    token = await manager._get_token(request)
+    token = await auth_config.manager()._get_token(request)
     if token is None:
         raise NotAuthenticatedException(401)
 
-    payload = manager._get_payload(token)
+    payload = auth_config.manager()._get_payload(token)
     # the identifier should be stored under the sub (subject) key
     user_identifier = payload.get("sub")
     if user_identifier is None:

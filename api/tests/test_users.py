@@ -2,7 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.security import manager
+from app.security import auth_config
 from app.tables import User, UserCreate
 
 from .api_fixtures import client_fixture  # noqa: F401
@@ -63,8 +63,8 @@ def test_login_bad_user(client: TestClient, default_user: User):
 
 
 def test_logout_user(client: TestClient, default_user: User):
-    token = manager.create_access_token(data={"sub": default_user.email})
-    resp = client.post("/logout", cookies={manager.cookie_name: token})
+    token = auth_config.manager().create_access_token(data={"sub": default_user.email})
+    resp = client.post("/logout", cookies={auth_config.manager().cookie_name: token})
     assert resp.status_code == 200, resp.json()
     assert len(resp.cookies) == 0
     assert resp.json() == {"status": "Success"}
@@ -79,9 +79,11 @@ def test_logout_no_user(client: TestClient, default_user: User):
 
 
 def test_logout_bad_user(client: TestClient, default_user: User):
-    token = manager.create_access_token(data={"sub": "BAD_USER_EMAIL"})
+    token = auth_config.manager().create_access_token(data={"sub": "BAD_USER_EMAIL"})
     resp = client.post(
-        "/logout", cookies={manager.cookie_name: token}, follow_redirects=False
+        "/logout",
+        cookies={auth_config.manager().cookie_name: token},
+        follow_redirects=False,
     )
     # if there's a bad user, we redirect to /login
     assert resp.status_code == 303
