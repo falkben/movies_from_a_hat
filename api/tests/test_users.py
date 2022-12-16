@@ -5,8 +5,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.security import auth_config
 from app.tables import User, UserCreate
 
-from .api_fixtures import client_fixture  # noqa: F401
-
 USER_DATA = {
     "email": "example@example.com",
     "password": "hunter2",
@@ -27,9 +25,13 @@ async def default_user(session: AsyncSession):
     yield user_db
 
 
-def test_register_user(client: TestClient):
+async def test_register_user(client: TestClient, session: AsyncSession):
     resp = client.post("/register", json=USER_DATA)
     assert resp.status_code == 200
+
+    user_in_db: User | None = await session.get(User, resp.json()["id"])
+    assert user_in_db is not None
+    assert user_in_db.email == USER_DATA["email"]
 
 
 def test_register_duplicate_user(client: TestClient, default_user: User):
@@ -88,3 +90,6 @@ def test_logout_bad_user(client: TestClient, default_user: User):
     # if there's a bad user, we redirect to /login
     assert resp.status_code == 303
     assert resp.headers["location"] == "/login"
+
+
+# todo: test is_admin user
