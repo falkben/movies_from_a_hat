@@ -26,6 +26,8 @@ dependencies = [
   "httpx",
   "python-multipart",  # parse form data
   "aiosqlite",
+  "fastapi-login",
+  "email-validator",
 ]
 
 [project.optional-dependencies]

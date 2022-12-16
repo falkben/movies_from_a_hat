@@ -1,7 +1,7 @@
 from functools import lru_cache
+from typing import Literal
 
-import httpx
-from pydantic import BaseSettings, Field, HttpUrl, validator
+from pydantic import BaseSettings, Field
 
 TMDB_API_URL = "https://api.themoviedb.org/3"
 
@@ -9,24 +9,22 @@ TMDB_API_URL = "https://api.themoviedb.org/3"
 class Settings(BaseSettings):
 
     tmdb_api_url: str = TMDB_API_URL
-    tmdb_api_key: str = Field(..., env="TMDB_API_TOKEN")
-    tmdb_base_path: HttpUrl | None = None
+    tmdb_api_key: str = Field(
+        ...,
+        env="TMDB_API_TOKEN",
+        description="From https://www.themoviedb.org/settings/api",
+    )
 
-    @validator("tmdb_base_path", always=True)
-    def set_tmdb_base_path(cls, v, values):
-        """Assign the tmdb_base_path"""
+    secret: str = Field(
+        ..., env="SECRET_KEY", description="A unique unpredictable value"
+    )
 
-        # we use a validator here to "compute" tmdb_base_path, which requires tmdb_api_key
-        # see: https://pydantic-docs.helpmanual.io/usage/validators/#validate-always
-
-        # get configuration for poster base_url (e.g.: https://image.tmdb.org/t/p/)
-        #  https://api.themoviedb.org/3/configuration?api_key=<<api_key>>
-
-        tmdb_config_url = f"{values['tmdb_api_url']}/configuration"
-        config_resp = httpx.get(
-            tmdb_config_url, params={"api_key": values["tmdb_api_key"]}
-        )
-        return config_resp.json()["images"]["secure_base_url"]
+    cookie_max_age: int = 10 * 24 * 60 * 60  # 10 days in seconds
+    cookie_secure: bool = Field(True, env="COOKIE_SECURE")
+    cookie_domain: str | None = Field(None, env="COOKIE_DOMAIN")
+    cookie_samesite: Literal["lax", "strict", "none"] = Field(
+        "lax", env="COOKIE_SAMESITE"
+    )
 
     class Config:
         env_file = ".env"
@@ -34,9 +32,14 @@ class Settings(BaseSettings):
 
 
 @lru_cache
-def get_settings():
+def get_settings() -> Settings:
     """dependency for returning settings
 
     Note: we use @lru_cache to avoid calling the configuration endpoint over and over
     """
     return Settings()
+
+
+@lru_cache
+def get_secret() -> str:
+    return get_settings().secret

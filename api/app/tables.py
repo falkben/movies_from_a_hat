@@ -1,12 +1,53 @@
 import re
 from datetime import date, datetime
 
-from pydantic import validator
+from pydantic import EmailStr, validator
 from sqlalchemy import CheckConstraint, Column, DateTime, UniqueConstraint
 from sqlalchemy.sql import func
 from sqlmodel import Field, Relationship, SQLModel
 
-# todo: Users
+from app.security import auth_config
+
+
+class UserBase(SQLModel):
+    username: str
+    email: EmailStr
+    is_admin: bool = False
+
+
+class User(UserBase, table=True):
+
+    # require users to be unique on username and email
+    __table_args__ = (UniqueConstraint("username"), UniqueConstraint("email"))
+
+    id: int | None = Field(default=None, primary_key=True)
+    username: str = Field(..., index=True)
+    email: str = Field(..., index=True)
+    password: str
+
+    created_at: datetime | None = Field(
+        sa_column=Column(DateTime(timezone=True), server_default=func.now())
+    )
+    updated_at: datetime | None = Field(
+        sa_column=Column(DateTime(timezone=True), onupdate=func.now())
+    )
+
+
+class UserCreate(UserBase):
+    password: str
+
+    @validator("password")
+    def hash_password(cls, plaintext_password: str):
+        return auth_config.hash_password(plaintext_password)
+
+
+class UserResponse(UserBase):
+    id: int
+    is_admin: bool
+    created_at: datetime
+    updated_at: datetime | None
+
+
 # todo: Groups (m2m w/ Users if users can belong to many groups)
 # todo: Watched (date) is M2M with Groups & Movies/Users & Movies
 
@@ -103,7 +144,7 @@ class MovieCreate(MovieBase):
     pass
 
 
-class MovieRead(MovieBase):
+class MovieResponse(MovieBase):
     id: int
     created_at: datetime
     updated_at: datetime | None
