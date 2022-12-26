@@ -1,12 +1,15 @@
 import re
+import uuid
 from datetime import date, datetime
 
+from fastapi_users import schemas
+from fastapi_users_db_sqlmodel import SQLModelBaseUserDB
+from fastapi_users_db_sqlmodel.access_token import SQLModelBaseAccessToken
 from pydantic import validator
 from sqlalchemy import CheckConstraint, Column, DateTime, UniqueConstraint
 from sqlalchemy.sql import func
 from sqlmodel import Field, Relationship, SQLModel
 
-# todo: Users
 # todo: Groups (m2m w/ Users if users can belong to many groups)
 # todo: Watched (date) is M2M with Groups & Movies/Users & Movies
 
@@ -15,6 +18,26 @@ RELEASE_DATE_CONSTR = date(1871, 1, 1)
 
 # regex for date in yyyy-mm-dd format
 re_date_format = re.compile("^([0-9]{4})-?(1[0-2]|0[1-9])-?(3[01]|0[1-9]|[12][0-9])$")
+
+
+class User(SQLModelBaseUserDB, table=True):
+    pass
+
+
+class UserRead(schemas.BaseUser[uuid.UUID]):
+    pass
+
+
+class UserCreate(schemas.BaseUserCreate):
+    pass
+
+
+class UserUpdate(schemas.BaseUserUpdate):
+    pass
+
+
+class AccessToken(SQLModelBaseAccessToken, table=True):
+    pass
 
 
 class GenreMovieLink(SQLModel, table=True):
@@ -103,7 +126,7 @@ class MovieCreate(MovieBase):
     pass
 
 
-class MovieRead(MovieBase):
+class MovieResponse(MovieBase):
     id: int
     created_at: datetime
     updated_at: datetime | None

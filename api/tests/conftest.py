@@ -1,5 +1,5 @@
 import json
-import pathlib
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -7,19 +7,20 @@ import respx
 from _pytest.logging import LogCaptureFixture
 from faker import Faker
 from fastapi.testclient import TestClient
+from fastapi_users_db_sqlmodel import SQLModelUserDatabaseAsync
 from httpx import Response
 from loguru import logger
 from respx.patterns import M
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.future import Engine
 from sqlalchemy.orm import sessionmaker
-from sqlmodel import Session
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel.pool import StaticPool
 
 from app import config
-from app.api import app
-from app.db import get_session
+from app.api import init_app
+from app.db import get_session, get_user_db
+from app.users import get_user_manager
 
 
 @pytest.fixture
@@ -37,8 +38,9 @@ def caplog(caplog: LogCaptureFixture):
 
 
 @pytest.fixture(autouse=True)
-def monkeypatch_settings_env_vars(monkeypatch):
+def patch_env_var(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("TMDB_API_TOKEN", "TESTING")
+    monkeypatch.setenv("SECRET_KEY", "secret")
 
 
 @pytest.fixture(name="engine")
@@ -75,8 +77,20 @@ async def session_fixture(engine: Engine):
         yield session
 
 
+@pytest.fixture(name="user_db")
+async def user_db_fixture(session: AsyncSession):
+    async for user_db in get_user_db(session):
+        yield user_db
+
+
+@pytest.fixture(name="user_manager")
+async def user_manager_fixture(user_db: SQLModelUserDatabaseAsync):
+    async for user_manager in get_user_manager(user_db):
+        yield user_manager
+
+
 @pytest.fixture(name="client")
-async def client_fixture(session: Session):
+async def client_fixture(session: AsyncSession):
     """Create the test client
 
     Overrides the session dependency in our endpoints to use this session instead
@@ -94,7 +108,9 @@ async def client_fixture(session: Session):
     def my_test_func(dude_movie: Movie, client: TestClient): ...
     """
 
-    def get_session_override():
+    app = init_app()
+
+    def get_session_override() -> AsyncSession:
         return session
 
     # Set the dependency override in the app.dependency_overrides dictionary.
@@ -105,6 +121,34 @@ async def client_fixture(session: Session):
         yield client
 
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+async def mocked_TMDB_config_req(respx_mock):
+
+    mocked_tmdb_config_data = {
+        "images": {
+            "base_url": "http://image.tmdb.org/t/p/",
+            "secure_base_url": "https://image.tmdb.org/t/p/",
+            "backdrop_sizes": ["w300", "w780", "w1280", "original"],
+            "logo_sizes": ["w45", "w92", "w154", "w185", "w300", "w500", "original"],
+            "poster_sizes": ["w92", "w154", "w185", "w342", "w500", "w780", "original"],
+            "profile_sizes": ["w45", "w185", "h632", "original"],
+            "still_sizes": ["w92", "w185", "w300", "original"],
+        },
+        # note: there's a list of "change_keys" in the response but we're not using that data
+    }
+    with respx.mock(assert_all_called=False) as respx_mock:
+        respx_mock.get(f"{config.TMDB_API_URL}/configuration").mock(
+            return_value=Response(200, json=mocked_tmdb_config_data)
+        )
+
+        yield respx_mock
+
+
+@pytest.fixture(name="settings")
+async def settings_fixture(mocked_TMDB_config_req):
+    yield config.get_settings()
 
 
 @pytest.fixture
@@ -139,37 +183,9 @@ async def mocked_TMDB():
 
 
 @pytest.fixture
-async def mocked_TMDB_config_req(respx_mock):
-
-    mocked_tmdb_config_data = {
-        "images": {
-            "base_url": "http://image.tmdb.org/t/p/",
-            "secure_base_url": "https://image.tmdb.org/t/p/",
-            "backdrop_sizes": ["w300", "w780", "w1280", "original"],
-            "logo_sizes": ["w45", "w92", "w154", "w185", "w300", "w500", "original"],
-            "poster_sizes": ["w92", "w154", "w185", "w342", "w500", "w780", "original"],
-            "profile_sizes": ["w45", "w185", "h632", "original"],
-            "still_sizes": ["w92", "w185", "w300", "original"],
-        },
-        # note: there's a list of "change_keys" in the response but we're not using that data
-    }
-    with respx.mock(assert_all_called=False) as respx_mock:
-        respx_mock.get(f"{config.TMDB_API_URL}/configuration").mock(
-            return_value=Response(200, json=mocked_tmdb_config_data)
-        )
-
-        yield respx_mock
-
-
-@pytest.fixture(name="settings")
-async def settings_fixture(mocked_TMDB_config_req):
-    yield config.get_settings()
-
-
-@pytest.fixture
 async def mocked_TMDB_movie_results(request):
     # test data location relative to the test file
-    file = pathlib.Path(request.node.fspath.strpath)
+    file = Path(request.node.fspath.strpath)
     movies_data = {
         "115": json.load(open(file.parent / "test_data" / "115.json")),
         "550": json.load(open(file.parent / "test_data" / "550.json")),

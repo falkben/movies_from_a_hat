@@ -26,6 +26,9 @@ dependencies = [
   "httpx",
   "python-multipart",  # parse form data
   "aiosqlite",
+  "fastapi-users[sqlalchemy]",
+  "fastapi-users-db-sqlmodel",
+  "email-validator", # pydantic email field
 ]
 
 [project.optional-dependencies]
